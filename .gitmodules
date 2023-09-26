@@ -1,6 +1,3 @@
-[submodule "libsystemctlm-soc"]
-	path = libsystemctlm-soc
-	url = https://github.com/chasinglulu/libsystemctlm-soc.git
 [submodule "verilog-ethernet"]
 	path = verilog-ethernet
 	url = https://github.com/chasinglulu/verilog-ethernet.git
