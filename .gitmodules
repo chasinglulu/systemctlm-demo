@@ -4,3 +4,7 @@
 [submodule "verilog-uart"]
 	path = verilog-uart
 	url = https://github.com/chasinglulu/verilog-uart.git
+[submodule "libsystemctlm-soc"]
+	path = libsystemctlm-soc
+	url = https://github.com/chasinglulu/libsystemctlm-soc.git
+	branch = hobot-sigi
