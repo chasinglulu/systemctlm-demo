@@ -4,3 +4,6 @@
 [submodule "verilog-ethernet"]
 	path = verilog-ethernet
 	url = https://github.com/chasinglulu/verilog-ethernet.git
+[submodule "verilog-uart"]
+	path = verilog-uart
+	url = https://github.com/chasinglulu/verilog-uart.git
