@@ -16,7 +16,7 @@ SYSTEMC_INCLUDE ?= $(SYSTEMC)/include/
 SYSTEMC_LIBDIR ?= $(SYSTEMC)/lib-linux64
 
 HAVE_VERILOG ?=n
-HAVE_VERILOG_VERILATOR ?=n
+HAVE_VERILOG_VERILATOR ?=y
 HAVE_VERILOG_VCS ?=n
 
 CFLAGS += -Wall -O2 -g
@@ -75,12 +75,12 @@ VERILATOR=verilator
 VM_SC?=1
 VM_TRACE?=0
 VM_COVERAGE?=0
-V_LDLIBS += $(VOBJ_DIR)/Vapb_timer__ALL.a
-V_LDLIBS += $(VOBJ_DIR)/Vaxilite_dev__ALL.a
-V_LDLIBS += $(VOBJ_DIR)/Vaxifull_dev__ALL.a
+#V_LDLIBS += $(VOBJ_DIR)/Vapb_timer__ALL.a
+# V_LDLIBS += $(VOBJ_DIR)/Vaxilite_dev__ALL.a
+# V_LDLIBS += $(VOBJ_DIR)/Vaxifull_dev__ALL.a
 LDLIBS += $(V_LDLIBS)
-VERILATED_O=$(VOBJ_DIR)/verilated.o
-VERILATED_O+=$(VOBJ_DIR)/verilated_threads.o
+VERILATED_O=verilated.o
+VERILATED_O+=verilated_threads.o
 
 # Gives some compatibility with vcs
 VFLAGS += --pins-bv 2 -Wno-fatal
@@ -106,6 +106,16 @@ SIGI_OBJS += $(OBJS)
 TARGET_SIGI_DEMO = sigi_demo
 TARGETS = $(TARGET_SIGI_DEMO)
 
+
+ifeq "$(HAVE_VERILOG_VERILATOR)" "y"
+#
+# verilog-uart
+#
+VUART_DIR = verilog-uart/rtl
+include verilog-uart.mk
+V_LDLIBS +=$(VOBJ_DIR)/Vuart__ALL.a
+endif
+
 all: $(TARGETS)
 
 -include $(SIGI_OBJS:.o=.d)
@@ -113,12 +123,23 @@ CFLAGS += -MMD
 CXXFLAGS += -MMD
 
 $(SIGI_TOP_O): $(V_LDLIBS)
+$(addprefix $(VOBJ_DIR)/,$(VERILATED_O)): $(V_LDLIBS)
 
-$(TARGET_SIGI_DEMO): $(SIGI_OBJS) $(VTOP_LIB) $(VERILATED_O)
+$(VOBJ_DIR)/Vuart__ALL.a: $(VUART_CORE)
+	$(VENV) $(VERILATOR) $(VFLAGS) $^
+	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f Vuart.mk
+	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f Vuart.mk $(VERILATED_O)
+
+$(TARGET_SIGI_DEMO): $(SIGI_OBJS) $(VTOP_LIB) $(addprefix $(VOBJ_DIR)/,$(VERILATED_O))
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-verilated_%.o: $(VERILATOR_ROOT)/include/verilated_%.cpp
+$(VOBJ_DIR)/V%__ALL.a: %.v
+	$(VENV) $(VERILATOR) $(VFLAGS) $<
+	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk)
+#	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk) $(VERILATED_O)
+
 
 clean:
 	$(RM) $(OBJS) $(OBJS:.o=.d) $(TARGETS)
 	$(RM) $(SIGI_OBJS) $(SIGI_OBJS:.o=.d)
+	$(RM) -r $(VOBJ_DIR)
