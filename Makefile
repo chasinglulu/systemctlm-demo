@@ -138,7 +138,6 @@ $(VOBJ_DIR)/V%__ALL.a: %.v
 	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk)
 #	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk) $(VERILATED_O)
 
-
 clean:
 	$(RM) $(OBJS) $(OBJS:.o=.d) $(TARGETS)
 	$(RM) $(SIGI_OBJS) $(SIGI_OBJS:.o=.d)
