@@ -5,4 +5,5 @@ trace.vcd
 obj_dir/
 compile_commands.json
 sigi_demo
+.cache
 

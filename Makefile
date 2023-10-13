@@ -118,12 +118,14 @@ endif
 
 all: $(TARGETS)
 
--include $(SIGI_OBJS:.o=.d)
-CFLAGS += -MMD
-CXXFLAGS += -MMD
+# -include $(SIGI_OBJS:.o=.d)
+# CFLAGS += -MMD
+# CXXFLAGS += -MMD
 
 $(SIGI_TOP_O): $(V_LDLIBS)
 $(addprefix $(VOBJ_DIR)/,$(VERILATED_O)): $(V_LDLIBS)
+
+include $(VERILATOR_ROOT)/include/verilated.mk
 
 $(VOBJ_DIR)/Vuart__ALL.a: $(VUART_CORE)
 	$(VENV) $(VERILATOR) $(VFLAGS) $^
