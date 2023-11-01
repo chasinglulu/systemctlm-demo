@@ -80,7 +80,6 @@ SC_MODULE(Top)
 	sc_signal<bool> txd;
 	sc_signal<bool> tx_busy;
 
-	// used for loopback mode
 	sc_signal<bool> wire;
 
 	sc_signal<sc_bv<16> > prescale;
