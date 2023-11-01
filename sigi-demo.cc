@@ -44,7 +44,7 @@ using namespace std;
 SC_MODULE(Top)
 {
 	SC_HAS_PROCESS(Top);
-	iconnect<NR_MASTERS, NR_DEVICES>	*bus;
+	iconnect<NR_MASTERS, NR_DEVICES> *bus;
 	hobot_sigi soc;
 
 	// axidma_mm2s dma_mm2s_A;

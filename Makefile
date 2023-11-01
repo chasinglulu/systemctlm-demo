@@ -127,6 +127,9 @@ $(addprefix $(VOBJ_DIR)/,$(VERILATED_O)): $(V_LDLIBS)
 
 include $(VERILATOR_ROOT)/include/verilated.mk
 
+CPPFLAGS := $(filter-out -faligned-new, $(CPPFLAGS))
+CXXFLAGS += -faligned-new
+
 $(VOBJ_DIR)/Vuart__ALL.a: $(VUART_CORE)
 	$(VENV) $(VERILATOR) $(VFLAGS) $^
 	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f Vuart.mk
