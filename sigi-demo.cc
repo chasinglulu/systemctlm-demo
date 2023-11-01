@@ -24,14 +24,15 @@ using namespace sc_dt;
 using namespace std;
 
 #include "sigi/hobot-sigi.h"
+#include "xilinx-axidma.h"
 #include "soc/interconnect/iconnect.h"
 #include "tests/test-modules/memory.h"
 
-#include "tlm-bridges/tlm2apb-bridge.h"
+// #include "tlm-bridges/tlm2apb-bridge.h"
 #include "tlm-bridges/tlm2axis-bridge.h"
 #include "tlm-bridges/axis2tlm-bridge.h"
 
-#include "tlm-uart-phy.h"
+// #include "tlm-uart-phy.h"
 
 #ifdef HAVE_VERILOG_VERILATOR
 #include "Vuart.h"
@@ -39,7 +40,7 @@ using namespace std;
 #endif
 
 #define NR_MASTERS	3
-#define NR_DEVICES	4
+#define NR_DEVICES	3
 
 SC_MODULE(Top)
 {
@@ -47,8 +48,8 @@ SC_MODULE(Top)
 	iconnect<NR_MASTERS, NR_DEVICES> *bus;
 	hobot_sigi soc;
 
-	// axidma_mm2s dma_mm2s_A;
-	// axidma_s2mm dma_s2mm_C;
+	axidma_mm2s dma_mm2s_A;
+	axidma_s2mm dma_s2mm_C;
 
 	tlm2axis_bridge<8> tlm2axis;
 	axis2tlm_bridge<8> axis2tlm;
@@ -57,7 +58,7 @@ SC_MODULE(Top)
 	sc_clock *clk;
 
 	Vuart *uart;
-	tlm_uart_phy phy;
+	// tlm_uart_phy phy;
 
 	sc_signal<sc_bv<8> > rx_axis_tdata;
 	sc_signal<sc_bv<1> > rx_axis_tstrb;
@@ -79,15 +80,24 @@ SC_MODULE(Top)
 	sc_signal<bool> txd;
 	sc_signal<bool> tx_busy;
 
+	sc_signal<bool> wire;
+
 	sc_signal<sc_bv<16> > prescale;
+
+	void gen_rst_n(void)
+	{
+		rst_n.write(!rst.read());
+	}
 
 	Top(sc_module_name name, const char *sk_desc, sc_time quantum) :
 		soc("sigi", sk_desc, remoteport_tlm_sync_untimed_ptr),
+		dma_mm2s_A("dma_mm2s_A"),
+		dma_s2mm_C("dma_s2mm_C"),
 		tlm2axis("tlm2axis"),
 		axis2tlm("axis2tlm"),
 		rst("rst"),
 		rst_n("rst_n"),
-		phy("phy"),
+		// phy("phy"),
 		rx_axis_tdata("rx_axis_tdata"),
 		rx_axis_tstrb("rx_axis_tstrb"),
 		rx_axis_tvaild("rx_axis_tvaild"),
@@ -106,11 +116,34 @@ SC_MODULE(Top)
 		tx_axis_tuser("tx_axis_tuser"),
 		txd("txd"),
 		tx_busy("tx_busy"),
+		wire("wire"),
 		prescale("prescale")
 	{
+		SC_METHOD(gen_rst_n);
+		sensitive << rst;
+
 		m_qk.set_global_quantum(quantum);
 
+		soc.rst(rst);
+
+		bus = new iconnect<NR_MASTERS, NR_DEVICES> ("bus");
+		bus->memmap(0x60004000, 0x100 - 1, ADDRMODE_RELATIVE, -1, dma_mm2s_A.tgt_socket);
+		bus->memmap(0x60005000, 0x100 - 1, ADDRMODE_RELATIVE, -1, dma_s2mm_C.tgt_socket);
+		bus->memmap(0x0UL, 0xffffffff - 1, ADDRMODE_RELATIVE, -1, *(soc.s_axi_msp[0]));
+
 		cout << "Hello World" << endl;
+
+		// Entry Point
+		soc.s_axi_mmp[0]->bind(*(bus->t_sk[0]));
+
+		dma_mm2s_A.init_socket.bind(*(bus->t_sk[1]));
+		dma_s2mm_C.init_socket.bind(*(bus->t_sk[2]));
+
+		dma_mm2s_A.stream_socket.bind(tlm2axis.tgt_socket);
+		axis2tlm.socket.bind(dma_s2mm_C.stream_socket);
+
+		dma_mm2s_A.irq(soc.h2d_irq[1]);
+		dma_s2mm_C.irq(soc.h2d_irq[0]);
 
 		clk = new sc_clock("clk", sc_time(10, SC_US));
 		uart = new Vuart("uart");
@@ -134,28 +167,33 @@ SC_MODULE(Top)
 		axis2tlm.tuser(rx_axis_tuser);
 
 		uart->clk(*clk);
-		uart->rst(rst);
+		uart->rst(rst_n);
 		uart->prescale(prescale);
-		uart->s_axis_tdata(rx_axis_tdata);
-		uart->s_axis_tvalid(rx_axis_tvaild);
+		uart->s_axis_tdata(tx_axis_tdata);
+		uart->s_axis_tvalid(tx_axis_tvaild);
 		uart->s_axis_tready(tx_axis_tready);
-		uart->m_axis_tdata(tx_axis_tdata);
-		uart->m_axis_tvalid(tx_axis_tvaild);
+		uart->m_axis_tdata(rx_axis_tdata);
+		uart->m_axis_tvalid(rx_axis_tvaild);
 		uart->m_axis_tready(rx_axis_tready);
 		uart->tx_busy(tx_busy);
 		uart->rx_busy(rx_busy);
 		uart->rx_frame_error(rx_frame_error);
 		uart->rx_overrun_error(rx_overrun_error);
-		uart->txd(txd);
-		uart->rxd(rxd);
 
-		phy.rx.clk(*clk);
-		phy.rx.rxd(rxd);
-		phy.rx.rx_busy(rx_busy);
+		// loopback mode
+		uart->txd(wire);
+		uart->rxd(wire);
 
-		phy.tx.clk(*clk);
-		phy.tx.txd(txd);
-		phy.tx.tx_busy(tx_busy);
+		// uart->txd(txd);
+		// uart->rxd(rxd);
+
+		// phy.rx.clk(*clk);
+		// phy.rx.rxd(rxd);
+		// phy.rx.rx_busy(rx_busy);
+
+		// phy.tx.clk(*clk);
+		// phy.tx.txd(txd);
+		// phy.tx.tx_busy(tx_busy);
 
 		soc.tie_off();
 	}
@@ -164,6 +202,10 @@ private:
 	tlm_utils::tlm_quantumkeeper m_qk;
 };
 
+void usage(void)
+{
+	cout << "tlm socket-path sync-quantum-ns" << endl;
+}
 
 int sc_main(int argc, char* argv[])
 {
@@ -187,6 +229,7 @@ int sc_main(int argc, char* argv[])
 
 	if (argc < 3) {
 		sc_start(1, SC_PS);
+		usage();
 		sc_stop();
 		exit(EXIT_FAILURE);
 	}

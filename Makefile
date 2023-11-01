@@ -63,6 +63,8 @@ SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-ats.o
 SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-pci-ep.o
 CPPFLAGS += -I $(LIBRP_PATH)
 
+SC_OBJS += xilinx-axidma.o
+
 VENV=SYSTEMC_INCLUDE=$(SYSTEMC_INCLUDE) SYSTEMC_LIBDIR=$(SYSTEMC_LIBDIR)
 VOBJ_DIR=obj_dir
 VFILES=apb_timer.v
