@@ -127,6 +127,7 @@ SC_MODULE(Top)
 		soc.rst(rst);
 
 		bus = new iconnect<NR_MASTERS, NR_DEVICES> ("bus");
+
 		bus->memmap(0x60004000, 0x100 - 1, ADDRMODE_RELATIVE, -1, dma_mm2s_A.tgt_socket);
 		bus->memmap(0x60005000, 0x100 - 1, ADDRMODE_RELATIVE, -1, dma_s2mm_C.tgt_socket);
 		bus->memmap(0x0UL, 0xffffffff - 1, ADDRMODE_RELATIVE, -1, *(soc.s_axi_msp[0]));
@@ -136,14 +137,16 @@ SC_MODULE(Top)
 		// Entry Point
 		soc.s_axi_mmp[0]->bind(*(bus->t_sk[0]));
 
+		// useless connection
 		dma_mm2s_A.init_socket.bind(*(bus->t_sk[1]));
+
 		dma_s2mm_C.init_socket.bind(*(bus->t_sk[2]));
 
 		dma_mm2s_A.stream_socket.bind(tlm2axis.tgt_socket);
 		axis2tlm.socket.bind(dma_s2mm_C.stream_socket);
 
-		dma_mm2s_A.irq(soc.h2d_irq[1]);
-		dma_s2mm_C.irq(soc.h2d_irq[0]);
+		dma_mm2s_A.irq(soc.d2h_irq[0]);
+		dma_s2mm_C.irq(soc.d2h_irq[1]);
 
 		clk = new sc_clock("clk", sc_time(10, SC_US));
 		uart = new Vuart("uart");
