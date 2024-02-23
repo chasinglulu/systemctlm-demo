@@ -7,145 +7,58 @@
 # Borrowed systemctlm-cosim-demo Makefile
 #
 
--include .config.mk
+INSTALL_DIR ?= $(CURDIR)/install
+DESTDIR ?= $(CURDIR)
+SC_DIR ?= $(CURDIR)/libsystemctlm-soc
+RP_DIR ?= $(SC_DIR)/libremote-port
+RTL_DIR ?= $(CURDIR)/verilog-uart/rtl
 
-INSTALL ?= install
+SYSTEMC_DIR ?= /usr/local
+SYSTEMC_INCLUDE ?= $(SYSTEMC_DIR)/include/
+SYSTEMC_LIBDIR ?= $(SYSTEMC_DIR)/lib-linux64
 
-SYSTEMC ?= /usr/local
-SYSTEMC_INCLUDE ?= $(SYSTEMC)/include/
-SYSTEMC_LIBDIR ?= $(SYSTEMC)/lib-linux64
+CXXFLAGS += -std=c++17 -Wall -Wextra -Wno-array-bounds
+CXXFLAGS += -fPIC -Wno-maybe-uninitialized
+CXXFLAGS += -I$(CURDIR)
+CXXFLAGS += -I$(SYSTEMC_INCLUDE)
+CXXFLAGS += -DHAVE_VERILOG_VERILATOR
+CXXFLAGS += -I$(SC_DIR)
+CXXFLAGS += -I$(SC_DIR)/sigi
+CXXFLAGS += -I$(SC_DIR)/tests/test-modules
+CXXFLAGS += -I$(SC_DIR)/libremote-port
 
-HAVE_VERILOG ?=n
-HAVE_VERILOG_VERILATOR ?=y
-HAVE_VERILOG_VCS ?=n
+SRCS += $(CURDIR)/sigi-demo.cc
+SRCS += $(CURDIR)/xilinx-axidma.cc
 
-CFLAGS += -Wall -O2 -g
-CXXFLAGS += -Wall -O2 -g
+SC_SRCS += $(SC_DIR)/sigi/hobot-sigi.cc
+SC_SRCS += $(SC_DIR)/tests/test-modules/memory.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm-wires.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm-memory-master.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm-memory-slave.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm-pci-ep.cc
+SC_SRCS += $(RP_DIR)/remote-port-tlm-ats.cc
+SC_SRCS += $(RP_DIR)/remote-port-sk.c
+SC_SRCS += $(RP_DIR)/remote-port-proto.c
+SC_SRCS += $(RP_DIR)/safeio.c
 
-ifneq "$(SYSTEMC_INCLUDE)" ""
-CPPFLAGS += -I $(SYSTEMC_INCLUDE)
-endif
-
-CPPFLAGS += -I .
-LDFLAGS  += -L $(SYSTEMC_LIBDIR) -Wl,-rpath $(SYSTEMC_LIBDIR)
-#LDLIBS += -pthread -Wl,-Bstatic -lsystemc -Wl,-Bdynamic
-LDLIBS   += -pthread -lsystemc
-
-SIGI_TOP_C = sigi-demo.cc
-SIGI_TOP_O = $(SIGI_TOP_C:.cc=.o)
-
-SIGI_OBJS += $(SIGI_TOP_O)
-
-# SC_OBJS += trace.o
-# SC_OBJS += debugdev.o
-# SC_OBJS += demo-dma.o
-# SC_OBJS += sigi-axidma.o
-
-LIBSOC_PATH=libsystemctlm-soc
-CPPFLAGS += -I $(LIBSOC_PATH)
-
-LIBSOC_SIGI_PATH=$(LIBSOC_PATH)/sigi
-SC_OBJS += $(LIBSOC_SIGI_PATH)/hobot-sigi.o
-CPPFLAGS += -I $(LIBSOC_SIGI_PATH)
-
-CPPFLAGS += -I $(LIBSOC_PATH)/tests/test-modules/
-SC_OBJS += $(LIBSOC_PATH)/tests/test-modules/memory.o
-
-LIBRP_PATH=$(LIBSOC_PATH)/libremote-port
-C_OBJS += $(LIBRP_PATH)/safeio.o
-C_OBJS += $(LIBRP_PATH)/remote-port-proto.o
-C_OBJS += $(LIBRP_PATH)/remote-port-sk.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-memory-master.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-memory-slave.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-wires.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-ats.o
-SC_OBJS += $(LIBRP_PATH)/remote-port-tlm-pci-ep.o
-CPPFLAGS += -I $(LIBRP_PATH)
-
-SC_OBJS += xilinx-axidma.o
-
-VENV=SYSTEMC_INCLUDE=$(SYSTEMC_INCLUDE) SYSTEMC_LIBDIR=$(SYSTEMC_LIBDIR)
-VOBJ_DIR=obj_dir
-VFILES=apb_timer.v
-
-ifeq "$(HAVE_VERILOG_VERILATOR)" "y"
-#VERILATOR_ROOT?=/usr/share/verilator
-VERILATOR_ROOT?=/usr/local/share/verilator
-VERILATOR=verilator
-
-VM_SC?=1
-VM_TRACE?=0
-VM_COVERAGE?=0
-#V_LDLIBS += $(VOBJ_DIR)/Vapb_timer__ALL.a
-# V_LDLIBS += $(VOBJ_DIR)/Vaxilite_dev__ALL.a
-# V_LDLIBS += $(VOBJ_DIR)/Vaxifull_dev__ALL.a
-LDLIBS += $(V_LDLIBS)
-VERILATED_O=verilated.o
-VERILATED_O+=verilated_threads.o
+VL_FILES += apb_timer.v
+VL_ENV += SYSTEMC_INCLUDE=$(SYSTEMC_INCLUDE) SYSTEMC_LIBDIR=$(SYSTEMC_LIBDIR)
 
 # Gives some compatibility with vcs
-VFLAGS += --pins-bv 2 -Wno-fatal
-VFLAGS += --output-split-cfuncs 500
+VL_FLAGS += --exe --pins-bv 2 -Wno-fatal
+VL_FLAGS += --output-split-cfuncs 500
+VL_FLAGS += -I$(RTL_DIR)
+VL_FLAGS += $(VL_FILES)
+VL_FLAGS += --sc uart --top-module uart
 
-VFLAGS+=--sc --Mdir $(VOBJ_DIR)
-VFLAGS += -CFLAGS "-DHAVE_VERILOG" -CFLAGS "-DHAVE_VERILOG_VERILATOR"
-CPPFLAGS += -DHAVE_VERILOG
-CPPFLAGS += -DHAVE_VERILOG_VERILATOR
-CPPFLAGS += -I $(VOBJ_DIR)
-
-ifeq "$(VM_TRACE)" "1"
-VFLAGS += --trace
-SC_OBJS += verilated_vcd_c.o
-SC_OBJS += verilated_vcd_sc.o
-CPPFLAGS += -DVM_TRACE=1
-endif
-endif
-
-OBJS = $(C_OBJS) $(SC_OBJS)
-SIGI_OBJS += $(OBJS)
-
-TARGET_SIGI_DEMO = sigi_demo
-TARGETS = $(TARGET_SIGI_DEMO)
-
-
-ifeq "$(HAVE_VERILOG_VERILATOR)" "y"
-#
-# verilog-uart
-#
-VUART_DIR = verilog-uart/rtl
-include verilog-uart.mk
-V_LDLIBS +=$(VOBJ_DIR)/Vuart__ALL.a
-endif
+TARGETS = $(DESTDIR)/sigi_demo
 
 all: $(TARGETS)
 
-# -include $(SIGI_OBJS:.o=.d)
-# CFLAGS += -MMD
-# CXXFLAGS += -MMD
-
-$(SIGI_TOP_O): $(V_LDLIBS)
-$(addprefix $(VOBJ_DIR)/,$(VERILATED_O)): $(V_LDLIBS)
-
-include $(VERILATOR_ROOT)/include/verilated.mk
-
-CPPFLAGS := $(filter-out -faligned-new, $(CPPFLAGS))
-CXXFLAGS += -faligned-new
-
-$(VOBJ_DIR)/Vuart__ALL.a: $(VUART_CORE)
-	$(VENV) $(VERILATOR) $(VFLAGS) $^
-	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f Vuart.mk
-	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f Vuart.mk $(VERILATED_O)
-
-$(TARGET_SIGI_DEMO): $(SIGI_OBJS) $(VTOP_LIB) $(addprefix $(VOBJ_DIR)/,$(VERILATED_O))
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-$(VOBJ_DIR)/V%__ALL.a: %.v
-	$(VENV) $(VERILATOR) $(VFLAGS) $<
-	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk)
-#	$(MAKE) -C $(VOBJ_DIR) CXXFLAGS="$(CXXFLAGS)" -f V$(<:.v=.mk) $(VERILATED_O)
+$(TARGETS): $(SC_SRCS) $(SRCS) $(CURDIR)/sigi-demo.cc
+	$(VL_ENV) verilator --build $(VL_FLAGS) $^ -CFLAGS '$(CXXFLAGS)' --Mdir $(DESTDIR)/obj_dir -o $@
 
 clean:
-	$(RM) $(OBJS) $(OBJS:.o=.d) $(TARGETS)
-	$(RM) $(SIGI_OBJS) $(SIGI_OBJS:.o=.d)
-	$(RM) -r $(VOBJ_DIR)
+	$(RM) -r $(DESTDIR)/obj_dir
+	$(RM) $(TARGETS)
