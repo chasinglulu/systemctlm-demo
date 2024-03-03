@@ -23,6 +23,7 @@ using namespace sc_core;
 using namespace sc_dt;
 using namespace std;
 
+#include "trace.h"
 #include "sigi/hobot-sigi.h"
 #include "xilinx-axidma.h"
 #include "soc/interconnect/iconnect.h"
@@ -148,6 +149,7 @@ SC_MODULE(Top)
 		dma_mm2s_A.irq(soc.d2h_irq[0]);
 		dma_s2mm_C.irq(soc.d2h_irq[1]);
 
+		/* Slow clock to keep simulation fast.  */
 		clk = new sc_clock("clk", sc_time(10, SC_US));
 		uart = new Vuart("uart");
 
@@ -238,7 +240,7 @@ int sc_main(int argc, char* argv[])
 	}
 
 	trace_fp = sc_create_vcd_trace_file("trace");
-	//trace(trace_fp, *top, top->name());
+	trace(trace_fp, *top, top->name());
 	/* Pull the reset signal.  */
 	top->rst.write(true);
 	sc_start(1, SC_US);
@@ -248,7 +250,6 @@ int sc_main(int argc, char* argv[])
 	if (trace_fp) {
 		sc_close_vcd_trace_file(trace_fp);
 	}
-	return 0;
 
 	return 0;
 }

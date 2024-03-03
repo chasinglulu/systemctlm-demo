@@ -29,6 +29,7 @@ CXXFLAGS += -I$(SC_DIR)/libremote-port
 
 SRCS += $(CURDIR)/sigi-demo.cc
 SRCS += $(CURDIR)/xilinx-axidma.cc
+SRCS += $(CURDIR)/trace.cc
 
 SC_SRCS += $(SC_DIR)/sigi/hobot-sigi.cc
 SC_SRCS += $(SC_DIR)/tests/test-modules/memory.cc
