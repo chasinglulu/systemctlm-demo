@@ -63,3 +63,4 @@ $(TARGETS): $(SC_SRCS) $(SRCS) $(CURDIR)/sigi-demo.cc
 clean:
 	$(RM) -r $(DESTDIR)/obj_dir
 	$(RM) $(TARGETS)
+	$(RM) -r *.vcd
